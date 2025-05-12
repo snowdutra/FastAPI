@@ -88,9 +88,8 @@ def delete_author(id: int):
 
     return JSONResponse(content={"id": author.id, "name": author.name}, status_code=200)
 
-@app.get("author/{author_id}")
+@app.get("/author/{author_id}")  # Adicionei a barra inicial
 def get_author(author_id: int):
-
     if not author_id:
         return JSONResponse(content={"error": "ID is required"}, status_code=400)
     
@@ -104,3 +103,18 @@ def get_author(author_id: int):
         return JSONResponse(content={"error": "Author not found"}, status_code=404)
 
     return JSONResponse(content={"id": author.id, "name": author.name}, status_code=200)
+
+@app.get('/authors/all')
+def get_all_authors():
+    try:
+        author_list = session.query(Author).all()
+        if not author_list:
+            return JSONResponse(content={'error': 'No authors found'}, status_code=404)
+        authors = []
+        for author in author_list:
+            authors.append({'id':author.id, 'name': author.name})
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    
+    return JSONResponse(content=authors, status_code=200)
