@@ -51,3 +51,39 @@ def create_author(name: str):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
     return JSONResponse(content={"id": author.id, "name": author.name}, status_code=201)
+
+
+@app.put("/author")
+def put_author(id: int, name: str):
+
+    if not id:
+        return JSONResponse(content={"error": "ID is required"}, status_code=400)
+    if not name:
+        return JSONResponse(content={"error": "Name is required"}, status_code=400)
+    
+    try:
+        author = session.query(Author).filter(Author.id == id).first()
+        author.name = name
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+
+    return JSONResponse(content={"id": author.id, "name": author.name}, status_code=200)
+
+@app.delete("/author")
+def delete_author(id: int):
+    
+    if not id:
+        return JSONResponse(content={"error": "ID is required"}, status_code=400)
+    
+    try:
+        author = session.query(Author).filter(Author.id == id).first()
+        session.delete(author)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return JSONResponse(content={"id": author.id, "name": author.name}, status_code=200)
