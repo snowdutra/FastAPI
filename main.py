@@ -9,7 +9,7 @@ from datetime import datetime
 
 app = FastAPI()
 
-engine = create_engine('postgresql://postgres:password@localhost:900/postgres')
+engine = create_engine('postgresql://postgres:root@localhost:900/postgres')
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 session = SessionLocal()
@@ -74,7 +74,7 @@ def put_author(id: int, name: str):
 
 @app.delete("/author")
 def delete_author(id: int):
-    
+
     if not id:
         return JSONResponse(content={"error": "ID is required"}, status_code=400)
     
@@ -85,5 +85,22 @@ def delete_author(id: int):
     except Exception as e:
         session.rollback()
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return JSONResponse(content={"id": author.id, "name": author.name}, status_code=200)
+
+@app.get("author/{author_id}")
+def get_author(author_id: int):
+
+    if not author_id:
+        return JSONResponse(content={"error": "ID is required"}, status_code=400)
+    
+    try:
+        author = session.query(Author).filter(Author.id == author_id).first()
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    if not author:
+        return JSONResponse(content={"error": "Author not found"}, status_code=404)
 
     return JSONResponse(content={"id": author.id, "name": author.name}, status_code=200)
