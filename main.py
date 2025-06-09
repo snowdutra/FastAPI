@@ -95,7 +95,34 @@ def get_patients():
         patients = session.query(Patient).all()
         if not patients:
             return JSONResponse(content={'error': 'No patients found'}, status_code=404)
-        patient_list = [{'id': p.id, 'name': p.name, 'lastname': p.lastname} for p in patients]
+        patient_list = []
+        for p in patients:
+            vaccines = session.query(Vaccine).filter_by(Patient_id=p.id).all()
+            vaccine_list = []
+            for v in vaccines:
+                doses = session.query(Dose).filter_by(Vaccine_id=v.id).all()
+                dose_list = [{
+                    'id': d.id,
+                    'vaccine_id': d.Vaccine_id,
+                    'typedose': d.typedose,
+                    'dosedate': str(d.dosedate),
+                    'dosenumber': d.dosenumber,
+                    'applicationtype': d.applicationtype
+                } for d in doses]
+                vaccine_list.append({
+                    'id': v.id,
+                    'name': v.name,
+                    'dosedate': str(v.dosedate),
+                    'dosenumber': v.dosenumber,
+                    'vaccinetype': v.vaccinetype,
+                    'doses': dose_list
+                })
+            patient_list.append({
+                'id': p.id,
+                'name': p.name,
+                'lastname': p.lastname,
+                'vaccines': vaccine_list
+            })
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
@@ -109,10 +136,38 @@ def get_patient(patient_id: int):
         patient = session.query(Patient).filter_by(id=patient_id).first()
         if not patient:
             return JSONResponse(content={'error': 'Patient not found'}, status_code=404)
+        vaccines = session.query(Vaccine).filter_by(Patient_id=patient_id).all()
+        vaccine_list = []
+        for v in vaccines:
+            doses = session.query(Dose).filter_by(Vaccine_id=v.id).all()
+            dose_list = [{
+                'id': d.id,
+                'vaccine_id': d.Vaccine_id,
+                'typedose': d.typedose,
+                'dosedate': str(d.dosedate),
+                'dosenumber': d.dosenumber,
+                'applicationtype': d.applicationtype
+            } for d in doses]
+            vaccine_list.append({
+                'id': v.id,
+                'name': v.name,
+                'dosedate': str(v.dosedate),
+                'dosenumber': v.dosenumber,
+                'vaccinetype': v.vaccinetype,
+                'doses': dose_list
+            })
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
-    return JSONResponse(content={'id': patient.id, 'name': patient.name, 'lastname': patient.lastname}, status_code=200)
+    return JSONResponse(
+        content={
+            'id': patient.id,
+            'name': patient.name,
+            'lastname': patient.lastname,
+            'vaccines': vaccine_list
+        },
+        status_code=200
+    )
 
 # CRUD Vaccine
 @app.post("/vaccines", tags=["Vacinas"])
@@ -165,10 +220,26 @@ def list_vaccines():
         vaccines = session.query(Vaccine).all()
         if not vaccines:
             return JSONResponse(content={'error': 'No vaccines found'}, status_code=404)
-        vaccine_list = [{
-            'id': v.id, 'patient_id': v.Patient_id, 'name': v.name,
-            'dosedate': str(v.dosedate), 'dosenumber': v.dosenumber, 'vaccinetype': v.vaccinetype
-        } for v in vaccines]
+        vaccine_list = []
+        for v in vaccines:
+            doses = session.query(Dose).filter_by(Vaccine_id=v.id).all()
+            dose_list = [{
+                'id': d.id,
+                'vaccine_id': d.Vaccine_id,
+                'typedose': d.typedose,
+                'dosedate': str(d.dosedate),
+                'dosenumber': d.dosenumber,
+                'applicationtype': d.applicationtype
+            } for d in doses]
+            vaccine_list.append({
+                'id': v.id,
+                'patient_id': v.Patient_id,
+                'name': v.name,
+                'dosedate': str(v.dosedate),
+                'dosenumber': v.dosenumber,
+                'vaccinetype': v.vaccinetype,
+                'doses': dose_list
+            })
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
@@ -182,12 +253,26 @@ def get_vaccine(vaccine_id: int):
         vaccine = session.query(Vaccine).filter_by(id=vaccine_id).first()
         if not vaccine:
             return JSONResponse(content={'error': 'Vaccine not found'}, status_code=404)
+        doses = session.query(Dose).filter_by(Vaccine_id=vaccine_id).all()
+        dose_list = [{
+            'id': d.id,
+            'vaccine_id': d.Vaccine_id,
+            'typedose': d.typedose,
+            'dosedate': str(d.dosedate),
+            'dosenumber': d.dosenumber,
+            'applicationtype': d.applicationtype
+        } for d in doses]
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
     return JSONResponse(content={
-        'id': vaccine.id, 'patient_id': vaccine.Patient_id, 'name': vaccine.name,
-        'dosedate': str(vaccine.dosedate), 'dosenumber': vaccine.dosenumber, 'vaccinetype': vaccine.vaccinetype
+        'id': vaccine.id,
+        'patient_id': vaccine.Patient_id,
+        'name': vaccine.name,
+        'dosedate': str(vaccine.dosedate),
+        'dosenumber': vaccine.dosenumber,
+        'vaccinetype': vaccine.vaccinetype,
+        'doses': dose_list
     }, status_code=200)
 
 @app.delete("/vaccines", tags=["Vacinas"])
