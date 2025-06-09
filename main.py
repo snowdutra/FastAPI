@@ -15,286 +15,283 @@ session = SessionLocal()
 
 Base = declarative_base()
 
-class Category(Base):
-    __tablename__ = 'category'
+class Vaccine(Base):
+    __tablename__ = 'vacine'
+    id = Column(Integer, primary_key=True)
+    Patient_id = Column(Integer, ForeignKey('patient.id', ondelete='CASCADE'))
+    name = Column(String(255))
+    dosedate = Column(DateTime)
+    dosenumber = Column(Integer)
+    vaccinetype = Column(String(255))
+
+class Patient(Base):
+    __tablename__ = 'patient'
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
+    lastname = Column(String(255))
 
-class Author(Base):
-    __tablename__ = 'author'
+class Dose(Base):
+    __tablename__ = 'dose'
     id = Column(Integer, primary_key=True)
-    name = Column(String(255))
-    age = Column(Integer, nullable=True)  # Para filtro por idade
-
-class Post(Base):
-    __tablename__ = 'post'
-    id = Column(Integer, primary_key=True)
-    title = Column(String(255))
-    subtitle = Column(String(255), nullable=True)
-    created = Column(DateTime)
-    authorid = Column(Integer, ForeignKey('author.id', ondelete='CASCADE'))
-    category_id = Column(Integer, ForeignKey('category.id', ondelete='SET NULL'), nullable=True)
-    author = relationship('Author')
-    category = relationship('Category')
+    Vaccine_id = Column(Integer, ForeignKey('vacine.id', ondelete='CASCADE'))
+    typedose = Column(String(255))
+    dosedate = Column(DateTime)
+    dosenumber = Column(Integer)
+    applicationtype = Column(String(255))
 
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
-# CRUD Author
-@app.post("/authors", tags=["Autores"])
-def create_author(name: str, age: int = None):
-    if not name:
-        return JSONResponse(content={'error': 'Name is required'}, status_code=400)
+# CRUD Patient
+@app.post("/patients", tags=["Pacientes"])
+def create_patient(name: str, lastname: str):
+    if not name or not lastname:
+        return JSONResponse(content={'error': 'Name and Lastname are required'}, status_code=400)
     try:
-        author = Author(name=name, age=age)
-        session.add(author)
+        patient = Patient(name=name, lastname=lastname)
+        session.add(patient)
         session.commit()
+        return JSONResponse(content={'id': patient.id, 'name': patient.name, 'lastname': patient.lastname}, status_code=201)
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
-    return JSONResponse(content={'id': author.id, 'name': author.name, 'age': author.age}, status_code=201)
 
-@app.put("/authors", tags=["Autores"])
-def put_author(id: int, name: str, age: int = None):
+@app.put("/patients", tags=["Pacientes"])
+def update_patient(id: int, name: str, lastname: str):
     if not id:
         return JSONResponse(content={'error': 'ID is required'}, status_code=400)
-    if not name:
-        return JSONResponse(content={'error': 'Name is required'}, status_code=400)
+    if not name or not lastname:
+        return JSONResponse(content={'error': 'Name and Lastname are required'}, status_code=400)
     try:
-        author = session.query(Author).filter_by(id=id).first()
-        if not author:
-            return JSONResponse(content={'error': 'Author not found'}, status_code=404)
-        author.name = name
-        if age is not None:
-            author.age = age
+        patient = session.query(Patient).filter_by(id=id).first()
+        if not patient:
+            return JSONResponse(content={'error': 'Patient not found'}, status_code=404)
+        patient.name = name
+        patient.lastname = lastname
         session.commit()
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
-    return JSONResponse(content={'id': author.id, 'name': author.name, 'age': author.age}, status_code=200)
+    return JSONResponse(content={'id': patient.id, 'name': patient.name, 'lastname': patient.lastname}, status_code=200)
 
-@app.delete("/authors", tags=["Autores"])
-def delete_author(id: int):
-    if not id:
-        return JSONResponse(content={'error': 'ID is required'}, status_code=400)
-    try:
-        author = session.query(Author).filter_by(id=id).first()
-        if not author:
-            return JSONResponse(content={'error': 'Author not found'}, status_code=404)
-        session.delete(author)
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        return JSONResponse(content={'error': str(e)}, status_code=500)
-    return JSONResponse(content={'message': 'Author deleted successfully'}, status_code=200)
-
-@app.get('/authors/all', tags=["Autores"])
-def get_all_authors():
-    try:
-        author_list = session.query(Author).all()
-        if not author_list:
-            return JSONResponse(content={'error': 'No authors found'}, status_code=404)
-        authors = []
-        for author in author_list:
-            authors.append({'id': author.id, 'name': author.name, 'age': author.age})
-    except Exception as e:
-        session.rollback()
-        return JSONResponse(content={'error': str(e)}, status_code=500)
-    return JSONResponse(content=authors, status_code=200)
-
-@app.get('/authors/{author_id}/', tags=["Autores"])
-def get_author(author_id: int):
-    if not author_id:
-        return JSONResponse(content={'error': 'ID is required'}, status_code=400)
-    try:
-        author = session.query(Author).filter_by(id=author_id).first()
-        if not author:
-            return JSONResponse(content={'error': 'Author not found'}, status_code=404)
-    except Exception as e:
-        session.rollback()
-        return JSONResponse(content={'error': str(e)}, status_code=500)
-    return JSONResponse(content={'id': author.id, 'name': author.name, 'age': author.age}, status_code=200)
-
-# CRUD Category
-@app.post("/categories", tags=["Categorias"])
-def create_category(name: str):
-    if not name:
-        return JSONResponse(content={'error': 'Name is required'}, status_code=400)
-    try:
-        category = Category(name=name)
-        session.add(category)
-        session.commit()
-        return JSONResponse(content={'id': category.id, 'name': category.name}, status_code=201)
-    except Exception as e:
-        session.rollback()
-        return JSONResponse(content={'error': str(e)}, status_code=500)
-
-@app.put("/categories", tags=["Categorias"])
-def update_category(id: int, name: str):
-    if not id or not name:
-        return JSONResponse(content={'error': 'ID and Name are required'}, status_code=400)
-    try:
-        category = session.query(Category).filter_by(id=id).first()
-        if not category:
-            return JSONResponse(content={'error': 'Category not found'}, status_code=404)
-        category.name = name
-        session.commit()
-        return JSONResponse(content={'id': category.id, 'name': category.name}, status_code=200)
-    except Exception as e:
-        session.rollback()
-        return JSONResponse(content={'error': str(e)}, status_code=500)
-
-@app.get("/categories", tags=["Categorias"])
-def list_categories():
-    try:
-        categories = session.query(Category).all()
-        return JSONResponse(content=[{'id': c.id, 'name': c.name} for c in categories], status_code=200)
-    except Exception as e:
-        session.rollback()
-        return JSONResponse(content={'error': str(e)}, status_code=500)
-
-@app.delete("/categories", tags=["Categorias"])
-def delete_category(id: int):
+@app.delete("/patients", tags=["Pacientes"])
+def delete_patient(id: int):
     if not id:
         return JSONResponse(content={'error': 'ID is required'}, status_code=400)
     try:
-        category = session.query(Category).filter_by(id=id).first()
-        if not category:
-            return JSONResponse(content={'error': 'Category not found'}, status_code=404)
-        session.delete(category)
+        patient = session.query(Patient).filter_by(id=id).first()
+        if not patient:
+            return JSONResponse(content={'error': 'Patient not found'}, status_code=404)
+        session.delete(patient)
         session.commit()
-        return JSONResponse(content={'message': 'Category deleted successfully'}, status_code=200)
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
+    return JSONResponse(content={'message': 'Patient deleted successfully'}, status_code=200)
 
-# CRUD Post
-@app.post("/posts", tags=["Posts"])
-def create_post(title: str, authorid: int, category_id: int = None, subtitle: str = None):
-    if not title:
-        return JSONResponse(content={'error': 'Title is required'}, status_code=400)
-    if not authorid:
-        return JSONResponse(content={'error': 'Author ID is required'}, status_code=400)
+@app.get("/patients", tags=["Pacientes"])
+def get_patients():
     try:
-        author = session.query(Author).filter_by(id=authorid).first()
-        if not author:
-            return JSONResponse(content={'error': 'Author not found'}, status_code=404)
-        if category_id:
-            category = session.query(Category).filter_by(id=category_id).first()
-            if not category:
-                return JSONResponse(content={'error': 'Category not found'}, status_code=404)
-        post = Post(title=title, subtitle=subtitle, created=datetime.now(), authorid=authorid, category_id=category_id)
-        session.add(post)
+        patients = session.query(Patient).all()
+        if not patients:
+            return JSONResponse(content={'error': 'No patients found'}, status_code=404)
+        patient_list = [{'id': p.id, 'name': p.name, 'lastname': p.lastname} for p in patients]
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    return JSONResponse(content=patient_list, status_code=200)
+
+@app.get("/patients/{patient_id}/", tags=["Pacientes"])
+def get_patient(patient_id: int):   
+    if not patient_id:
+        return JSONResponse(content={'error': 'ID is required'}, status_code=400)
+    try:
+        patient = session.query(Patient).filter_by(id=patient_id).first()
+        if not patient:
+            return JSONResponse(content={'error': 'Patient not found'}, status_code=404)
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    return JSONResponse(content={'id': patient.id, 'name': patient.name, 'lastname': patient.lastname}, status_code=200)
+
+# CRUD Vaccine
+@app.post("/vaccines", tags=["Vacinas"])
+def create_vaccine(patient_id: int, name: str, dosedate: datetime, dosenumber: int, vaccinetype: str):
+    if not patient_id or not name or not dosedate or not dosenumber or not vaccinetype:
+        return JSONResponse(content={'error': 'All fields are required'}, status_code=400)
+    try:
+        patient = session.query(Patient).filter_by(id=patient_id).first()
+        if not patient:
+            return JSONResponse(content={'error': 'Patient not found'}, status_code=404)
+        vaccine = Vaccine(Patient_id=patient_id, name=name, dosedate=dosedate, dosenumber=dosenumber, vaccinetype=vaccinetype)
+        session.add(vaccine)
         session.commit()
         return JSONResponse(content={
-            'id': post.id, 'title': post.title, 'subtitle': post.subtitle, 'created': str(post.created),
-            'authorid': post.authorid, 'category_id': post.category_id
+            'id': vaccine.id, 'patient_id': vaccine.Patient_id, 'name': vaccine.name,
+            'dosedate': str(vaccine.dosedate), 'dosenumber': vaccine.dosenumber, 'vaccinetype': vaccine.vaccinetype
         }, status_code=201)
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
-
-@app.put("/posts", tags=["Posts"])
-def put_post(id: int, title: str, authorid: int, category_id: int = None, subtitle: str = None):
+    
+@app.put("/vaccines", tags=["Vacinas"])
+def update_vaccine(id: int, patient_id: int, name: str, dosedate: datetime, dosenumber: int, vaccinetype: str):
+    if not id or not patient_id or not name or not dosedate or not dosenumber or not vaccinetype:
+        return JSONResponse(content={'error': 'All fields are required'}, status_code=400)
     try:
-        if not id:
-            return JSONResponse(content={'error': 'ID is required'}, status_code=400)
-        if not title:
-            return JSONResponse(content={'error': 'Title is required'}, status_code=400)
-        if not authorid:
-            return JSONResponse(content={'error': 'Author ID is required'}, status_code=400)
-        post = session.query(Post).filter_by(id=id).first()
-        if not post:
-            return JSONResponse(content={'error': 'Post not found'}, status_code=404)
-        author = session.query(Author).filter_by(id=authorid).first()
-        if not author:
-            return JSONResponse(content={'error': 'Author not found'}, status_code=404)
-        if category_id:
-            category = session.query(Category).filter_by(id=category_id).first()
-            if not category:
-                return JSONResponse(content={'error': 'Category not found'}, status_code=404)
-            post.category_id = category_id
-        post.title = title
-        post.subtitle = subtitle
-        post.authorid = authorid
+        vaccine = session.query(Vaccine).filter_by(id=id).first()
+        if not vaccine:
+            return JSONResponse(content={'error': 'Vaccine not found'}, status_code=404)
+        patient = session.query(Patient).filter_by(id=patient_id).first()
+        if not patient:
+            return JSONResponse(content={'error': 'Patient not found'}, status_code=404)
+        vaccine.Patient_id = patient_id
+        vaccine.name = name
+        vaccine.dosedate = dosedate
+        vaccine.dosenumber = dosenumber
+        vaccine.vaccinetype = vaccinetype
         session.commit()
         return JSONResponse(content={
-            'id': post.id, 'title': post.title, 'subtitle': post.subtitle, 'created': str(post.created),
-            'authorid': post.authorid, 'category_id': post.category_id
+            'id': vaccine.id, 'patient_id': vaccine.Patient_id, 'name': vaccine.name,
+            'dosedate': str(vaccine.dosedate), 'dosenumber': vaccine.dosenumber, 'vaccinetype': vaccine.vaccinetype
         }, status_code=200)
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
-
-@app.delete("/posts", tags=["Posts"])
-def delete_post(id: int):
+    
+@app.get("/vaccines", tags=["Vacinas"])
+def list_vaccines():
     try:
-        if not id:
-            return JSONResponse(content={'error': 'ID is required'}, status_code=400)
-        post = session.query(Post).filter_by(id=id).first()
-        if not post:
-            return JSONResponse(content={'error': 'Post not found'}, status_code=404)
-        session.delete(post)
+        vaccines = session.query(Vaccine).all()
+        if not vaccines:
+            return JSONResponse(content={'error': 'No vaccines found'}, status_code=404)
+        vaccine_list = [{
+            'id': v.id, 'patient_id': v.Patient_id, 'name': v.name,
+            'dosedate': str(v.dosedate), 'dosenumber': v.dosenumber, 'vaccinetype': v.vaccinetype
+        } for v in vaccines]
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    return JSONResponse(content=vaccine_list, status_code=200)
+
+@app.get("/vaccines/{vaccine_id}", tags=["Vacinas"])
+def get_vaccine(vaccine_id: int):
+    if not vaccine_id:
+        return JSONResponse(content={'error': 'ID is required'}, status_code=400)
+    try:
+        vaccine = session.query(Vaccine).filter_by(id=vaccine_id).first()
+        if not vaccine:
+            return JSONResponse(content={'error': 'Vaccine not found'}, status_code=404)
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    return JSONResponse(content={
+        'id': vaccine.id, 'patient_id': vaccine.Patient_id, 'name': vaccine.name,
+        'dosedate': str(vaccine.dosedate), 'dosenumber': vaccine.dosenumber, 'vaccinetype': vaccine.vaccinetype
+    }, status_code=200)
+
+@app.delete("/vaccines", tags=["Vacinas"])
+def delete_vaccine(id: int):
+    if not id:
+        return JSONResponse(content={'error': 'ID is required'}, status_code=400)
+    try:
+        vaccine = session.query(Vaccine).filter_by(id=id).first()
+        if not vaccine:
+            return JSONResponse(content={'error': 'Vaccine not found'}, status_code=404)
+        session.delete(vaccine)
         session.commit()
-        return JSONResponse(content={'message': 'Post deleted successfully'}, status_code=200)
+        return JSONResponse(content={'message': 'Vaccine deleted successfully'}, status_code=200)
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
 
-@app.get("/posts", tags=["Posts"])
-def get_posts():
+# CRUD Dose
+@app.post("/doses", tags=["Doses"])
+def create_dose(vaccine_id: int, typedose: str, dosedate: datetime, dosenumber: int, applicationtype: str):
+    if not vaccine_id or not typedose or not dosedate or not dosenumber or not applicationtype:
+        return JSONResponse(content={'error': 'All fields are required'}, status_code=400)
     try:
-        posts = session.query(Post).all()
-        post_list = []
-        for post in posts:
-            author = session.query(Author).filter_by(id=post.authorid).first()
-            category = session.query(Category).filter_by(id=post.category_id).first() if post.category_id else None
-            post_list.append({
-                'id': post.id,
-                'title': post.title,
-                'subtitle': post.subtitle,
-                'created': str(post.created),
-                'authorid': author.id if author else None,
-                'author_name': author.name if author else None,
-                'author_age': author.age if author else None,
-                'category_id': category.id if category else None,
-                'category_name': category.name if category else None
-            })
-        return JSONResponse(content=post_list, status_code=200)
+        vaccine = session.query(Vaccine).filter_by(id=vaccine_id).first()
+        if not vaccine:
+            return JSONResponse(content={'error': 'Vaccine not found'}, status_code=404)
+        dose = Dose(Vaccine_id=vaccine_id, typedose=typedose, dosedate=dosedate, dosenumber=dosenumber, applicationtype=applicationtype)
+        session.add(dose)
+        session.commit()
+        return JSONResponse(content={
+            'id': dose.id, 'vaccine_id': dose.Vaccine_id, 'typedose': dose.typedose,
+            'dosedate': str(dose.dosedate), 'dosenumber': dose.dosenumber, 'applicationtype': dose.applicationtype
+        }, status_code=201)
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
-
-@app.get("/posts/filter", tags=["Posts"])
-def filter_posts(category_id: int = None, min_age: int = None, search: str = None):
+    
+@app.put("/doses", tags=["Doses"])
+def update_dose(id: int, vaccine_id: int, typedose: str, dosedate: datetime, dosenumber: int, applicationtype: str):
+    if not id or not vaccine_id or not typedose or not dosedate or not dosenumber or not applicationtype:
+        return JSONResponse(content={'error': 'All fields are required'}, status_code=400)
     try:
-        query = session.query(Post).join(Author)
-        if category_id:
-            query = query.filter(Post.category_id == category_id)
-        if min_age:
-            query = query.filter(Author.age >= min_age)
-        if search:
-            query = query.filter(
-                (Post.title.ilike(f"%{search}%")) |
-                (Post.subtitle.ilike(f"%{search}%"))
-            )
-        posts = query.all()
-        result = []
-        for post in posts:
-            author = post.author
-            category = post.category
-            result.append({
-                'id': post.id,
-                'title': post.title,
-                'subtitle': post.subtitle,
-                'created': str(post.created),
-                'authorid': author.id if author else None,
-                'author_name': author.name if author else None,
-                'author_age': author.age if author else None,
-                'category_id': category.id if category else None,
-                'category_name': category.name if category else None
-            })
-        return JSONResponse(content=result, status_code=200)
+        dose = session.query(Dose).filter_by(id=id).first()
+        if not dose:
+            return JSONResponse(content={'error': 'Dose not found'}, status_code=404)
+        vaccine = session.query(Vaccine).filter_by(id=vaccine_id).first()
+        if not vaccine:
+            return JSONResponse(content={'error': 'Vaccine not found'}, status_code=404)
+        dose.Vaccine_id = vaccine_id
+        dose.typedose = typedose
+        dose.dosedate = dosedate
+        dose.dosenumber = dosenumber
+        dose.applicationtype = applicationtype
+        session.commit()
+        return JSONResponse(content={
+            'id': dose.id, 'vaccine_id': dose.Vaccine_id, 'typedose': dose.typedose,
+            'dosedate': str(dose.dosedate), 'dosenumber': dose.dosenumber, 'applicationtype': dose.applicationtype
+        }, status_code=200)
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    
+@app.get("/doses", tags=["Doses"])
+def list_doses():
+    try:
+        doses = session.query(Dose).all()
+        if not doses:
+            return JSONResponse(content={'error': 'No doses found'}, status_code=404)
+        dose_list = [{
+            'id': d.id, 'vaccine_id': d.Vaccine_id, 'typedose': d.typedose,
+            'dosedate': str(d.dosedate), 'dosenumber': d.dosenumber, 'applicationtype': d.applicationtype
+        } for d in doses]
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    return JSONResponse(content=dose_list, status_code=200)
+
+@app.get("/doses/{dose_id}", tags=["Doses"])
+def get_dose(dose_id: int):
+    if not dose_id:
+        return JSONResponse(content={'error': 'ID is required'}, status_code=400)
+    try:
+        dose = session.query(Dose).filter_by(id=dose_id).first()
+        if not dose:
+            return JSONResponse(content={'error': 'Dose not found'}, status_code=404)
+    except Exception as e:
+        session.rollback()
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    return JSONResponse(content={
+        'id': dose.id, 'vaccine_id': dose.Vaccine_id, 'typedose': dose.typedose,
+        'dosedate': str(dose.dosedate), 'dosenumber': dose.dosenumber, 'applicationtype': dose.applicationtype
+    }, status_code=200)
+
+@app.delete("/doses", tags=["Doses"])
+def delete_dose(id: int):
+    if not id:
+        return JSONResponse(content={'error': 'ID is required'}, status_code=400)
+    try:
+        dose = session.query(Dose).filter_by(id=id).first()
+        if not dose:
+            return JSONResponse(content={'error': 'Dose not found'}, status_code=404)
+        session.delete(dose)
+        session.commit()
+        return JSONResponse(content={'message': 'Dose deleted successfully'}, status_code=200)
     except Exception as e:
         session.rollback()
         return JSONResponse(content={'error': str(e)}, status_code=500)
@@ -302,9 +299,9 @@ def filter_posts(category_id: int = None, min_age: int = None, search: str = Non
 # Endpoint HTML com títulos de seção (não sobrescreve a documentação Swagger)
 @app.get("/home", response_class=HTMLResponse, tags=["Visualização"])
 def home():
-    autores = session.query(Author).all()
-    categorias = session.query(Category).all()
-    posts = session.query(Post).all()
+    pacientes = session.query(Patient).all()
+    vacinas = session.query(Vaccine).all()
+    doses = session.query(Dose).all()
 
     html = """
     <html>
@@ -320,21 +317,21 @@ def home():
         <h1>Autores</h1>
         <ul>
     """
-    for autor in autores:
+    for autor in pacientes:
         html += f"<li>{autor.name} (idade: {autor.age if autor.age is not None else 'N/A'})</li>"
     html += """
         </ul>
         <h1>Categorias</h1>
         <ul>
     """
-    for categoria in categorias:
+    for categoria in vacinas:
         html += f"<li>{categoria.name}</li>"
     html += """
         </ul>
         <h1>Posts</h1>
         <ul>
     """
-    for post in posts:
+    for post in doses:
         html += f"<li>{post.title} - {post.subtitle or ''}</li>"
     html += """
         </ul>
